@@ -2,6 +2,86 @@
 
 > **A Student-Centric Academic Operating System for ESP – DGI**
 
+---
+
+## 🚀 Démarrage rapide (développement local)
+
+Ce guide permet à **n'importe quel contributeur** de lancer le projet de zéro avec une base **Supabase 100% locale** (aucun mail de confirmation, aucun compte cloud requis).
+
+### Prérequis
+- **Node.js 18+** et **npm**
+- **Docker** installé et **démarré** (nécessaire pour Supabase local)
+- **psql** (client PostgreSQL) — optionnel, sinon utiliser l'éditeur SQL de Supabase Studio
+
+> La CLI Supabase est utilisée via `npx` : aucune installation globale nécessaire.
+
+### 1. Installer les dépendances
+```bash
+npm install
+```
+
+### 2. Démarrer Supabase en local
+Assure-toi que Docker tourne, puis :
+```bash
+npx supabase start
+```
+Le premier lancement télécharge les images Docker (quelques minutes). À la fin, récupère les infos de connexion avec :
+```bash
+npx supabase status
+```
+Note la valeur **`API_URL`** (`http://127.0.0.1:54321`) et **`ANON_KEY`** (le long jeton `eyJ...`).
+
+> ℹ️ La confirmation par email est **désactivée par défaut** en local (`enable_confirmations = false` dans `supabase/config.toml`) : l'inscription est donc immédiate, sans mail.
+
+### 3. Créer le schéma et les correctifs de la base
+```bash
+psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db_setup_v11.sql
+psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db_fix_profiles.sql
+```
+- `db_setup_v11.sql` : tables + données initiales (matières, examens, config).
+- `db_fix_profiles.sql` : ajoute les colonnes `department`/`level`, la policy d'insertion et le **trigger qui crée automatiquement le profil à l'inscription**.
+
+> Sans psql : ouvre **Supabase Studio** (`http://127.0.0.1:54323`) → *SQL Editor* et colle le contenu des deux fichiers.
+
+### 4. Connecter l'app au Supabase local
+Édite [`supabase.ts`](supabase.ts) avec les valeurs de l'étape 2 :
+```ts
+const supabaseUrl = 'http://127.0.0.1:54321';
+const supabaseAnonKey = '<colle ici ANON_KEY>';
+```
+
+### 5. Lancer l'application
+```bash
+npm run dev
+```
+Ouvre l'URL affichée par Vite (`http://localhost:3000`, ou le port suivant si 3000 est occupé).
+Crée ton compte via **Sign up** → connexion immédiate, le profil est créé automatiquement.
+
+### 6. (Optionnel) Se donner les droits admin
+```bash
+psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+  -c "update profiles set role='admin' where id=(select id from auth.users where email='TON_EMAIL');"
+```
+
+### Adresses utiles (local)
+| Service | URL |
+|--------|-----|
+| App (Vite) | http://localhost:3000 |
+| Supabase Studio | http://127.0.0.1:54323 |
+| Mailpit (mails de test capturés) | http://127.0.0.1:54324 |
+| Base de données | `postgresql://postgres:postgres@127.0.0.1:54322/postgres` |
+
+### Commandes Supabase
+```bash
+npx supabase stop      # arrête la stack (les données persistent)
+npx supabase start     # redémarre
+npx supabase status    # affiche URLs et clés
+```
+
+> ⚠️ `supabase.ts` contient des identifiants en dur. En local, mets-y les clés locales. Ne committe pas de clés d'un projet de production.
+
+---
+
 **Polytech Portal (PP)** is a Progressive Web Application designed as a **personal academic operating system** for students of the **École Supérieure Polytechnique (ESP)**, specifically within the **Département Génie Informatique (DGI)**.
 
 PP merges three traditionally disconnected layers into a single coherent system:
